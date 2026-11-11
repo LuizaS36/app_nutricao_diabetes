@@ -166,7 +166,7 @@ class _Macro extends StatelessWidget {
           const SizedBox(height: 3),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(value: value / goal, minHeight: 6, color: color, backgroundColor: color.withValues(.15)),
+            child: LinearProgressIndicator(value: value / goal, minHeight: 6, color: color, backgroundColor: color.withValues(alpha: .15)),
           ),
         ]),
       );

@@ -47,7 +47,7 @@ class IconBubble extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 40,
         height: 40,
-        decoration: BoxDecoration(color: color.withValues(.25), borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: color.withValues(alpha: .25), borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, color: AppColors.olive, size: 22),
       );
 }
