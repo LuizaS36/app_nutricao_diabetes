@@ -71,7 +71,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 12),
               if (patient) ...[
                 DropdownButtonFormField<String>(
-                  value: diabetes,
+                  initialValue: diabetes,
                   decoration: const InputDecoration(labelText: 'Diabetes'),
                   items: [for (final t in ['Diabetes Tipo 1', 'Diabetes Tipo 2', 'Pré-diabetes', 'Diabetes Gestacional']) DropdownMenuItem(value: t, child: Text(t))],
                   onChanged: (v) => setState(() => diabetes = v ?? diabetes),

@@ -56,7 +56,7 @@ class _FoodFormState extends State<_FoodForm> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Align(alignment: Alignment.centerLeft, child: _SheetTitle('Registrar refeição')),
           DropdownButtonFormField<String>(
-            value: meal,
+            initialValue : meal,
             decoration: const InputDecoration(labelText: 'Refeição'),
             items: [for (final m in meals) DropdownMenuItem(value: m.key, child: Text(m.key))],
             onChanged: (v) => setState(() => meal = v ?? meal),
@@ -125,7 +125,7 @@ class _GlucoseFormState extends State<_GlucoseForm> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: ctx,
+            initialValue: ctx,
             decoration: const InputDecoration(labelText: 'Momento da medição'),
             items: [for (final c in contexts) DropdownMenuItem(value: c, child: Text(c))],
             onChanged: (v) => setState(() => ctx = v ?? ctx),
@@ -181,7 +181,7 @@ class _MedicationFormState extends State<_MedicationForm> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Align(alignment: Alignment.centerLeft, child: _SheetTitle('Adicionar medicamento')),
           DropdownButtonFormField<String>(
-            value: type,
+            initialValue: type,
             decoration: const InputDecoration(labelText: 'Tipo'),
             items: [for (final t in ['Medicamento', 'Vitamina', 'Suplemento']) DropdownMenuItem(value: t, child: Text(t))],
             onChanged: (v) => setState(() => type = v ?? type),

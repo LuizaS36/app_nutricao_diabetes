@@ -179,7 +179,7 @@ class _AuthScreenState extends State<AuthScreen> {
           if (!creating) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: _forgot, child: const Text('Esqueci minha senha'))),
           _gap(),
           DropdownButtonFormField<String>(
-            value: role,
+            initialValue: role,
             decoration: const InputDecoration(labelText: 'Tipo de acesso'),
             items: const [
               DropdownMenuItem(value: 'patient', child: Text('Paciente')),

@@ -103,7 +103,7 @@ class _NotificationFormState extends State<_NotificationForm> {
         const Text('Alertar caso nenhum consumo seja registrado durante o período.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: draft.waterInterval,
+          initialValue: draft.waterInterval,
           items: const [
             DropdownMenuItem(value: '1', child: Text('A cada 1 hora')),
             DropdownMenuItem(value: '2', child: Text('A cada 2 horas')),
