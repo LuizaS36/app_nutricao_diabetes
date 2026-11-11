@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
-import '../theme.dart';
 import '../widgets/common.dart';
 
 class EditProfileScreen extends StatefulWidget {
