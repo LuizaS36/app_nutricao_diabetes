@@ -19,8 +19,9 @@ String initialsOf(String name) {
 const _emptyProfile = ProfileInfo(name: '', email: '', phone: '', birthDate: '', city: '', detail1: '', detail2: '', detail3: '');
 Map<String, bool> _defaultSettings() => {'reminders': true, 'messages': true, 'weekly': false};
 
+///try replacing `<` with `&lt;` and `>` with `&gt;`.
 /// Estado do app. Os dados de cada usuário ficam guardados POR CONTA
-/// (userdata_<id>): cada login enxerga só o que é seu.
+/// (userdata_&lt;id&gt;): cada login enxerga só o que é seu.
 class AppState extends ChangeNotifier {
   AppState([AuthRepository? auth]) : auth = auth ?? AuthRepository();
 

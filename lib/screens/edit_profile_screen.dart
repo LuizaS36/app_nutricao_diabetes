@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
-import '../theme.dart';
 import '../widgets/common.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -70,7 +69,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 12),
               if (patient) ...[
                 DropdownButtonFormField<String>(
-                  value: diabetes,
+                  initialValue: diabetes,
                   decoration: const InputDecoration(labelText: 'Diabetes'),
                   items: [for (final t in ['Não informado', 'Diabetes Tipo 1', 'Diabetes Tipo 2', 'Pré-diabetes', 'Diabetes Gestacional']) DropdownMenuItem(value: t, child: Text(t))],
                   onChanged: (v) => setState(() => diabetes = v ?? diabetes),

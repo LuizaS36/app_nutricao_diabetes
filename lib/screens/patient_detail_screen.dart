@@ -152,7 +152,7 @@ class _Bar extends StatelessWidget {
           const SizedBox(height: 4),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(value: progress, minHeight: 6, color: color, backgroundColor: color.withOpacity(.2)),
+            child: LinearProgressIndicator(value: progress, minHeight: 6, color: color, backgroundColor: color.withValues(alpha: .2)),
           ),
         ]),
       );
