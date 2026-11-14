@@ -24,7 +24,7 @@ class _MealsScreenState extends State<MealsScreen> {
     final state = widget.state;
     final selectedDate = dateKey(_day(selected));
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const PageHeading(eyebrow: 'Plano alimentar', title: 'Minhas refeições', subtitle: 'Dieta atualizada pela Dra. Ana Lima.'),
+      const PageHeading(eyebrow: 'Plano alimentar', title: 'Minhas refeições', subtitle: 'Dieta definida pela sua nutricionista.'),
       Row(children: [
         IconButton(onPressed: () => setState(() { center--; selected--; }), icon: const Icon(Icons.chevron_left)),
         for (var i = 0; i < 5; i++) _dayChip(center + i - 2),
@@ -73,7 +73,7 @@ class _MealsScreenState extends State<MealsScreen> {
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Eyebrow('Dieta proposta'),
-          const Text('Somente leitura · por Dra. Ana Lima', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+          const Text('Somente leitura · definida pela nutricionista', style: TextStyle(fontSize: 11, color: AppColors.muted)),
           const SizedBox(height: 6),
           Text((m.items as List<String>).join(' · ')),
           const SizedBox(height: 8),

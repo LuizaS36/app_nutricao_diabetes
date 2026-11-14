@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_state.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final d1 = TextEditingController(text: p.detail1);
   late final d2 = TextEditingController(text: p.detail2);
   late final d3 = TextEditingController(text: p.detail3);
-  late String diabetes = p.diabetes.isEmpty ? 'Diabetes Tipo 2' : p.diabetes;
+  late String diabetes = p.diabetes.isEmpty ? 'Não informado' : p.diabetes;
 
   bool get patient => widget.state.role == Role.patient;
 
@@ -37,10 +38,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _save() {
     if (!_key.currentState!.validate()) return;
     widget.state.saveProfile(
-      widget.state.role,
       p.copyWith(
         name: name.text.trim(), email: email.text.trim(), phone: phone.text, birthDate: birth.text.trim(), city: city.text.trim(),
-        detail1: d1.text.trim(), detail2: d2.text.trim(), detail3: d3.text.trim(), diabetes: patient ? diabetes : '',
+        detail1: d1.text.trim(), detail2: d2.text.trim(), detail3: d3.text.trim(), diabetes: patient && diabetes != 'Não informado' ? diabetes : '',
       ),
     );
     Navigator.pop(context);
@@ -70,18 +70,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 12),
               if (patient) ...[
                 DropdownButtonFormField<String>(
-                  initialValue: diabetes,
+                  value: diabetes,
                   decoration: const InputDecoration(labelText: 'Diabetes'),
-                  items: [for (final t in ['Diabetes Tipo 1', 'Diabetes Tipo 2', 'Pré-diabetes', 'Diabetes Gestacional']) DropdownMenuItem(value: t, child: Text(t))],
+                  items: [for (final t in ['Não informado', 'Diabetes Tipo 1', 'Diabetes Tipo 2', 'Pré-diabetes', 'Diabetes Gestacional']) DropdownMenuItem(value: t, child: Text(t))],
                   onChanged: (v) => setState(() => diabetes = v ?? diabetes),
                 ),
                 _gap(),
               ],
-              TextFormField(controller: d1, decoration: InputDecoration(labelText: patient ? 'Altura' : 'CRN'), validator: _req),
+              TextFormField(controller: d1, decoration: InputDecoration(labelText: patient ? 'Altura' : 'CRN')),
               _gap(),
-              TextFormField(controller: d2, decoration: InputDecoration(labelText: patient ? 'Peso atual' : 'Especialidade'), validator: _req),
+              TextFormField(controller: d2, decoration: InputDecoration(labelText: patient ? 'Peso atual' : 'Especialidade')),
               _gap(),
-              TextFormField(controller: d3, decoration: InputDecoration(labelText: patient ? 'Meta de peso' : 'Horário de atendimento'), validator: _req),
+              TextFormField(controller: d3, decoration: InputDecoration(labelText: patient ? 'Meta de peso' : 'Horário de atendimento')),
               const SizedBox(height: 22),
               Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),

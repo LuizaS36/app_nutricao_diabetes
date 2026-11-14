@@ -1,3 +1,5 @@
+enum Role { patient, nutritionist }
+
 class GlucoseLog {
   GlucoseLog({required this.id, required this.value, required this.context, required this.time});
   final int id;

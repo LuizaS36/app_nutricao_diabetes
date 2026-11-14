@@ -34,7 +34,7 @@ class CurvePainter extends CustomPainter {
     }
     if (goalZone != null) {
       final g = goalZone!;
-      canvas.drawRect(Rect.fromLTWH(g.left * sx, g.top * sy, g.width * sx, g.height * sy), Paint()..color = AppColors.mint.withValues(alpha: .5));
+      canvas.drawRect(Rect.fromLTWH(g.left * sx, g.top * sy, g.width * sx, g.height * sy), Paint()..color = AppColors.mint.withOpacity(.5));
     }
     final p = Path()..moveTo(start.dx * sx, start.dy * sy);
     for (final s in segments) {

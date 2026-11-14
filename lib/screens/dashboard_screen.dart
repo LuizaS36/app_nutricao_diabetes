@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../data.dart';
+import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/confetti.dart';
@@ -11,6 +12,8 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key, required this.state});
   final AppState state;
 
+  static const _goalKcal = 1880;
+
   @override
   Widget build(BuildContext context) => Stack(children: [
         _content(context),
@@ -19,15 +22,19 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _content(BuildContext context) {
     final today = dateKey(DateTime.now());
+    final todayLogs = state.foodLogs.where((f) => f.date == today).toList();
+    final eaten = todayLogs.fold<int>(0, (s, f) => s + f.kcal);
+    final latest = state.glucoseLogs.isEmpty ? null : state.glucoseLogs.first;
+
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const PageHeading(eyebrow: 'Hoje', title: 'Olá, Marina!', subtitle: 'Seu dia está indo muito bem. Continue assim.'),
+      PageHeading(eyebrow: 'Hoje', title: 'Olá, ${state.firstName}!', subtitle: 'Acompanhe seu dia por aqui.'),
       FilledButton.icon(
         onPressed: () => showAddGlucoseSheet(context, state),
         icon: const Icon(Icons.add),
         label: const Text('Registrar glicose'),
       ),
       const SizedBox(height: 16),
-      // Calorias
+      // Calorias (somadas dos registros de hoje)
       AppCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -42,27 +49,28 @@ class DashboardScreen extends StatelessWidget {
               width: 110,
               height: 110,
               child: Stack(alignment: Alignment.center, children: [
-                const SizedBox.expand(
-                  child: CircularProgressIndicator(value: .68, strokeWidth: 10, backgroundColor: AppColors.mint, color: AppColors.teal),
+                SizedBox.expand(
+                  child: CircularProgressIndicator(value: (eaten / _goalKcal).clamp(0, 1).toDouble(), strokeWidth: 10, backgroundColor: AppColors.mint, color: AppColors.teal),
                 ),
-                const Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('1.280', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-                  Text('de 1.880 kcal', style: TextStyle(fontSize: 10, color: AppColors.muted)),
+                Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text('$eaten', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+                  const Text('de 1.880 kcal', style: TextStyle(fontSize: 10, color: AppColors.muted)),
                 ]),
               ]),
             ),
             const SizedBox(width: 20),
-            const Expanded(
-              child: Column(children: [
-                _Macro('Proteínas', 72, 105, AppColors.coral),
-                _Macro('Carboidratos', 138, 210, AppColors.amber),
-                _Macro('Gorduras', 42, 62, AppColors.purple),
-              ]),
+            Expanded(
+              child: Text(
+                todayLogs.isEmpty
+                    ? 'Nenhuma refeição registrada hoje. Toque no + de uma refeição abaixo para começar.'
+                    : (eaten >= _goalKcal ? 'Meta diária atingida.' : 'Restam ${_goalKcal - eaten} kcal para a meta de hoje.'),
+                style: const TextStyle(color: AppColors.muted, height: 1.5),
+              ),
             ),
           ]),
         ]),
       ),
-      // Glicemia
+      // Glicemia (último registro)
       AppCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -73,14 +81,24 @@ class DashboardScreen extends StatelessWidget {
           ]),
           const SizedBox(height: 8),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            const Text('112', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800)),
+            Text(latest == null ? '—' : '${latest.value}', style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800)),
             const SizedBox(width: 6),
             const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('mg/dL', style: TextStyle(color: AppColors.muted))),
             const Spacer(),
-            Chip(label: const Text('Na meta'), backgroundColor: AppColors.mint, side: BorderSide.none, labelStyle: const TextStyle(color: AppColors.teal, fontWeight: FontWeight.w700)),
+            if (latest != null)
+              Chip(
+                label: Text(latest.value > 140 ? 'Acima da meta' : 'Na meta'),
+                backgroundColor: AppColors.mint,
+                side: BorderSide.none,
+                labelStyle: TextStyle(color: latest.value > 140 ? AppColors.warn : AppColors.teal, fontWeight: FontWeight.w700),
+              ),
           ]),
-          const SizedBox(height: 10),
-          const MiniGlucoseChart(),
+          if (latest == null)
+            const Text('Nenhuma medição ainda. Toque em "Registrar glicose".', style: TextStyle(fontSize: 12, color: AppColors.muted))
+          else ...[
+            const SizedBox(height: 10),
+            const MiniGlucoseChart(),
+          ],
         ]),
       ),
       // Refeições do dia
@@ -90,7 +108,8 @@ class DashboardScreen extends StatelessWidget {
           child: Row(children: [
             Stack(clipBehavior: Clip.none, children: [
               IconBubble(Icons.restaurant, color: mealColor(m.color)),
-              if (m.done) const Positioned(right: -4, top: -4, child: CircleAvatar(radius: 8, backgroundColor: AppColors.teal, child: Icon(Icons.check, size: 11, color: Colors.white))),
+              if (todayLogs.any((f) => f.meal == m.key))
+                const Positioned(right: -4, top: -4, child: CircleAvatar(radius: 8, backgroundColor: AppColors.teal, child: Icon(Icons.check, size: 11, color: Colors.white))),
             ]),
             const SizedBox(width: 12),
             Expanded(
@@ -130,44 +149,30 @@ class DashboardScreen extends StatelessWidget {
         ]),
       ),
       // Próximo lembrete
-      AppCard(
-        onTap: () => state.setTab(2),
-        child: const Row(children: [
-          IconBubble(Icons.medication_outlined, color: AppColors.purple),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('PRÓXIMO LEMBRETE', style: TextStyle(fontSize: 10, color: AppColors.muted, fontWeight: FontWeight.w700)),
-              Text('Metformina', style: TextStyle(fontWeight: FontWeight.w700)),
-              Text('500mg · Após o jantar', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-            ]),
-          ),
-          Text('20:00', style: TextStyle(fontWeight: FontWeight.w800)),
-        ]),
-      ),
+      AppCard(onTap: () => state.setTab(2), child: _NextReminder(state.medications)),
     ]);
   }
 }
 
-class _Macro extends StatelessWidget {
-  const _Macro(this.label, this.value, this.goal, this.color);
-  final String label;
-  final int value, goal;
-  final Color color;
+class _NextReminder extends StatelessWidget {
+  const _NextReminder(this.meds);
+  final List<Medication> meds;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+  Widget build(BuildContext context) {
+    final pending = meds.where((m) => !m.done).toList()..sort((a, b) => a.time.compareTo(b.time));
+    final next = pending.isEmpty ? null : pending.first;
+    return Row(children: [
+      const IconBubble(Icons.medication_outlined, color: AppColors.purple),
+      const SizedBox(width: 12),
+      Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted))),
-            Text('${value}g / ${goal}g', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-          ]),
-          const SizedBox(height: 3),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(value: value / goal, minHeight: 6, color: color, backgroundColor: color.withValues(alpha: .15)),
-          ),
+          const Text('PRÓXIMO LEMBRETE', style: TextStyle(fontSize: 10, color: AppColors.muted, fontWeight: FontWeight.w700)),
+          Text(next?.name ?? 'Nenhum lembrete', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(next == null ? 'Cadastre medicamentos na aba Glicose' : '${next.dose} · ${next.type}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
         ]),
-      );
+      ),
+      if (next != null) Text(next.time, style: const TextStyle(fontWeight: FontWeight.w800)),
+    ]);
+  }
 }

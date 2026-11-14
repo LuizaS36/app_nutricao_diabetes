@@ -11,16 +11,8 @@ class PatientDetailScreen extends StatelessWidget {
   final AppState state;
   final Patient patient;
 
-  List<FoodLog> _history() {
-    if (patient.name == 'Marina Costa' && state.foodLogs.isNotEmpty) return state.foodLogs;
-    final today = dateKey(DateTime.now());
-    final yesterday = dateKey(DateTime.now().subtract(const Duration(days: 1)));
-    return [
-      FoodLog(id: 901, meal: 'Café da manhã', name: 'Iogurte com banana e granola', amount: '1 porção', kcal: 365, date: today),
-      FoodLog(id: 902, meal: 'Almoço', name: 'Frango, arroz integral e legumes', amount: '1 prato', kcal: 525, date: today),
-      FoodLog(id: 903, meal: 'Jantar', name: 'Sopa de legumes com carne', amount: '300ml', kcal: 410, date: yesterday),
-    ];
-  }
+  // Os registros alimentares ficam no aparelho do paciente; sem servidor, não há como lê-los aqui.
+  List<FoodLog> _history() => const [];
 
   void _openDiet(BuildContext context, {required bool editing}) => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => DietScreen(state: state, patient: patient, startEditing: editing)),
@@ -60,13 +52,14 @@ class PatientDetailScreen extends StatelessWidget {
           ]),
           const SizedBox(height: 16),
           Row(children: [
-            Expanded(child: _Stat('Glicemia média', patient.glucose > 0 ? '${patient.glucose}' : '—', 'mg/dL', 'Dentro da meta')),
+            Expanded(child: _Stat('Glicemia média', patient.glucose > 0 ? '${patient.glucose}' : '—', 'mg/dL', patient.glucose > 0 ? 'Dentro da meta' : 'Sem dados ainda')),
             const SizedBox(width: 8),
-            const Expanded(child: _Stat('Adesão ao plano', '84', '%', '↑ 6% no mês')),
+            const Expanded(child: _Stat('Adesão ao plano', '—', '', 'Sem dados ainda')),
             const SizedBox(width: 8),
-            const Expanded(child: _Stat('Peso atual', '72,4', 'kg', 'Meta: 68 kg')),
+            const Expanded(child: _Stat('Peso atual', '—', '', 'Sem dados ainda')),
           ]),
           const SizedBox(height: 4),
+          if (patient.glucose > 0)
           AppCard(
             padding: const EdgeInsets.all(18),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -109,6 +102,7 @@ class PatientDetailScreen extends StatelessWidget {
               const SizedBox(height: 2),
               const Text('Histórico de refeições realizadas', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
               const SizedBox(height: 6),
+              if (history.isEmpty) const Text('Nenhum registro de refeição ainda.', style: TextStyle(color: AppColors.muted)),
               for (final log in history)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -158,7 +152,7 @@ class _Bar extends StatelessWidget {
           const SizedBox(height: 4),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(value: progress, minHeight: 6, color: color, backgroundColor: color.withValues(alpha: .2)),
+            child: LinearProgressIndicator(value: progress, minHeight: 6, color: color, backgroundColor: color.withOpacity(.2)),
           ),
         ]),
       );

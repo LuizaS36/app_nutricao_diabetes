@@ -34,14 +34,17 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
+    final last = state.glucoseLogs.take(7).toList();
+    final avg = last.isEmpty ? '—' : (last.fold<int>(0, (s, l) => s + l.value) / last.length).round().toString();
+    final inRange = last.isEmpty ? '—' : (last.where((l) => l.value >= 70 && l.value <= 140).length * 100 / last.length).round().toString();
     return ListView(padding: const EdgeInsets.all(16), children: [
       const PageHeading(eyebrow: 'Acompanhamento', title: 'Glicose e saúde', subtitle: 'Acompanhe sua glicemia, medicamentos e vitaminas.'),
       FilledButton.icon(onPressed: () => showAddGlucoseSheet(context, state), icon: const Icon(Icons.add), label: const Text('Nova medição')),
       const SizedBox(height: 16),
-      const Row(children: [
-        Expanded(child: _Stat('Média de 7 dias', '118', 'mg/dL', '↓ 4% esta semana')),
-        SizedBox(width: 12),
-        Expanded(child: _Stat('Tempo na meta', '86', '%', 'Excelente controle')),
+      Row(children: [
+        Expanded(child: _Stat('Média dos registros', avg, 'mg/dL', last.isEmpty ? 'Sem registros' : 'Últimos ${last.length} registros')),
+        const SizedBox(width: 12),
+        Expanded(child: _Stat('Tempo na meta', inRange, '%', last.isEmpty ? 'Sem registros' : 'Meta: 70–140 mg/dL')),
       ]),
       const SizedBox(height: 12),
       AppCard(
@@ -53,6 +56,7 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
               child: const Text('Ver todos'),
             ),
           ]),
+          if (state.glucoseLogs.isEmpty) const Text('Nenhuma medição ainda.', style: TextStyle(color: AppColors.muted)),
           for (final e in state.glucoseLogs.take(3).toList().asMap().entries) _LogRow(e.value, e.key),
         ]),
       ),

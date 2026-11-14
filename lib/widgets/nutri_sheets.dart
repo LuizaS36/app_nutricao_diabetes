@@ -33,85 +33,61 @@ class _Title extends StatelessWidget {
 }
 
 // ---------- Calendário de consultas ----------
-void showAppointmentsSheet(BuildContext context) {
-  final today = DateTime.now();
-  final items = [
-    (1, '09:00', 'Marina Costa', 'Retorno'),
-    (1, '14:30', 'Rafael Mendes', 'Primeira consulta'),
-    (2, '10:00', 'Clara Oliveira', 'Acompanhamento'),
-    (3, '08:30', 'Paulo Nunes', 'Retorno'),
-    (3, '16:00', 'Marina Costa', 'Ajuste de plano'),
-    (4, '11:00', 'Rafael Mendes', 'Acompanhamento'),
-  ];
-  _sheet(
-    context,
-    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const _Title('Agenda', 'Calendário de consultas'),
-      for (var i = 0; i < items.length; i++) ...[
-        if (i == 0 || items[i - 1].$1 != items[i].$1)
-          Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 4),
-            child: Text(ptDate(today.add(Duration(days: items[i].$1))), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.teal)),
-          ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Text(items[i].$2, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-          title: Text(items[i].$3, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(items[i].$4),
+void showAppointmentsSheet(BuildContext context) => _sheet(
+      context,
+      const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _Title('Agenda', 'Calendário de consultas'),
+        Text(
+          'Nenhuma consulta agendada. O agendamento será liberado quando o app for conectado a um servidor.',
+          style: TextStyle(color: AppColors.muted, height: 1.5),
         ),
-      ],
-    ]),
-  );
-}
+      ]),
+    );
+
+/// Pacientes com status "Atenção" (glicemia acima da meta).
+List<Patient> patientsNeedingAttention(AppState state) =>
+    state.patients.where((p) => p.status == 'Atenção').toList();
 
 // ---------- Pacientes que precisam de atenção ----------
-void showAttentionSheet(BuildContext context) {
-  const rows = [
-    ('CO', 'Clara Oliveira', 'Glicemia de 164 mg/dL, acima da meta definida.'),
-    ('RM', 'Rafael Mendes', 'Não registra refeições há 3 dias.'),
-    ('PN', 'Paulo Nunes', 'Adesão ao plano caiu para 58% nesta semana.'),
-  ];
+void showAttentionSheet(BuildContext context, AppState state) {
+  final list = patientsNeedingAttention(state);
   _sheet(
     context,
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const _Title('Atenção', 'Pacientes que precisam de atenção'),
-      for (final r in rows)
+      if (list.isEmpty) const Text('Nenhum paciente precisa de atenção agora.', style: TextStyle(color: AppColors.muted)),
+      for (final p in list)
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: InitialsAvatar(r.$1),
-          title: Text(r.$2, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(r.$3),
+          leading: InitialsAvatar(p.initials),
+          title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text('Glicemia de ${p.glucose} mg/dL, acima da meta definida.'),
         ),
     ]),
   );
 }
 
 // ---------- Sino: alertas clínicos ----------
-const clinicalAlertCount = 3;
-
 void showClinicalAlertsSheet(BuildContext context, AppState state) {
-  const alerts = [
-    ('CO', 'Clara Oliveira', 'Pico de Glicemia', '164 mg/dL após o almoço'),
-    ('RM', 'Rafael Mendes', 'Baixo Consumo de Água', 'Apenas 500 ml registrados hoje'),
-    ('PN', 'Paulo Nunes', 'Pouca Ingestão de Alimentos', 'Nenhuma refeição registrada desde ontem'),
-  ];
+  final list = patientsNeedingAttention(state);
   _sheet(
     context,
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const _Title('Central clínica', 'Alertas de pacientes'),
-      for (final a in alerts)
+      if (list.isEmpty) const Text('Nenhum alerta no momento.', style: TextStyle(color: AppColors.muted)),
+      for (final p in list)
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: InitialsAvatar(a.$1),
-          title: Text(a.$2, style: const TextStyle(fontWeight: FontWeight.w700)),
+          leading: InitialsAvatar(p.initials),
+          title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(a.$3, style: const TextStyle(color: AppColors.warn, fontWeight: FontWeight.w700)),
-            Text(a.$4),
+            const Text('Pico de Glicemia', style: TextStyle(color: AppColors.warn, fontWeight: FontWeight.w700)),
+            Text('${p.glucose} mg/dL'),
           ]),
           trailing: TextButton(
             onPressed: () {
               Navigator.pop(context);
-              state.openChat(a.$2);
+              state.openChat(p.name);
             },
             child: const Text('Abrir chat'),
           ),

@@ -24,27 +24,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String search = '';
   final input = TextEditingController();
   final scroll = ScrollController();
-  late final List<_Msg> messages = widget.state.role == Role.patient
-      ? [_Msg(false, 'Olá, Marina! Como você se sentiu com o novo plano alimentar?', '09:34'), _Msg(true, 'Olá! Estou me adaptando bem. Gostei muito das opções de lanche.', '09:41')]
-      : [_Msg(false, 'Olá, doutora! Estou me adaptando bem ao novo plano.', '09:34'), _Msg(true, 'Que bom! Vi que seus registros de glicose também estão ótimos.', '09:41')];
+  final List<_Msg> messages = [];
 
   List<_Contact> get contacts => widget.state.role == Role.patient
-      ? [
-          (name: 'Dra. Ana Lima', initials: 'AL', preview: 'Que bom! Até amanhã.', time: '09:41', unread: 1),
-          (name: 'Equipe Equilibra', initials: 'EQ', preview: 'Seu relatório está disponível.', time: 'Ontem', unread: 0),
-        ]
+      ? const []
       : [
-          (name: 'Marina Costa', initials: 'MC', preview: 'Estou me adaptando bem ao novo plano.', time: '09:41', unread: 2),
-          (name: 'Clara Oliveira', initials: 'CO', preview: 'Enviei meus registros da semana.', time: '08:20', unread: 1),
-          (name: 'Rafael Mendes', initials: 'RM', preview: 'Obrigado pelas novas orientações.', time: 'Ontem', unread: 0),
-          (name: 'Paulo Nunes', initials: 'PN', preview: 'Podemos ajustar o jantar?', time: 'Seg', unread: 0),
+          for (final p in widget.state.patients)
+            (name: p.name, initials: p.initials, preview: 'Iniciar conversa', time: '', unread: 0),
         ];
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.state.role == Role.patient) selected = contacts.first.name;
-  }
 
   @override
   void dispose() { input.dispose(); scroll.dispose(); super.dispose(); }
@@ -78,7 +65,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       PageHeading(
         eyebrow: 'Atendimento',
         title: 'Mensagens',
-        subtitle: widget.state.role == Role.patient ? 'Converse com sua equipe de cuidado.' : 'Selecione uma conversa para falar com o paciente.',
+        subtitle: 'As conversas ficam só neste aparelho até o app ser conectado a um servidor.',
       ),
       Card(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -95,6 +82,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ]),
           ),
           const Divider(height: 1),
+          if (list.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('Nenhuma conversa ainda.', style: TextStyle(color: AppColors.muted)),
+            ),
           for (final c in list)
             ListTile(
               leading: InitialsAvatar(c.initials),

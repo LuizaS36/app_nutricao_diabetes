@@ -20,12 +20,13 @@ class _AuthScreenState extends State<AuthScreen> {
   final birth = TextEditingController();
   final city = TextEditingController();
   final password = TextEditingController();
+  final confirm = TextEditingController();
   String role = 'patient';
   bool terms = false;
 
   @override
   void dispose() {
-    for (final c in [name, email, phone, birth, city, password]) { c.dispose(); }
+    for (final c in [name, email, phone, birth, city, password, confirm]) { c.dispose(); }
     super.dispose();
   }
 
@@ -50,46 +51,35 @@ class _AuthScreenState extends State<AuthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aceite os termos de uso para continuar.')));
       return;
     }
-    widget.state.authenticate(
-      role == 'nutritionist' ? Role.nutritionist : Role.patient,
-      creating: creating,
-      name: name.text.trim(),
-      email: email.text.trim(),
-      phone: phone.text,
-      birthDate: birth.text,
-      city: city.text.trim(),
-    );
+    final r = role == 'nutritionist' ? Role.nutritionist : Role.patient;
+    final error = creating
+        ? widget.state.signUp(
+            role: r,
+            name: name.text,
+            email: email.text,
+            password: password.text,
+            phone: phone.text,
+            birthDate: birth.text,
+            city: city.text,
+          )
+        : widget.state.signIn(role: r, email: email.text, password: password.text);
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    }
   }
 
   void _forgot() {
-    final ctl = TextEditingController();
-    var sent = false;
     showDialog<void>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: Text(sent ? 'Verifique seu e-mail' : 'Recuperar senha'),
-          content: sent
-              ? const Text('Se o endereço estiver cadastrado, você receberá em instantes o link para criar uma nova senha.')
-              : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Informe o seu e-mail cadastrado para receber o link de recuperação de senha.'),
-                  const SizedBox(height: 12),
-                  TextField(controller: ctl, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'E-mail', hintText: 'voce@email.com')),
-                ]),
-          actions: [
-            if (sent)
-              FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Entendi'))
-            else ...[
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-              FilledButton(
-                onPressed: () { if (ctl.text.contains('@')) setD(() => sent = true); },
-                child: const Text('Enviar'),
-              ),
-            ],
-          ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Recuperar senha'),
+        content: const Text(
+          'A recuperação por e-mail será ativada quando o app for conectado a um servidor. '
+          'Por enquanto, as contas ficam salvas só neste aparelho e a senha não pode ser redefinida.',
         ),
+        actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Entendi'))],
       ),
-    ).whenComplete(ctl.dispose);
+    );
   }
 
   @override
@@ -176,11 +166,20 @@ class _AuthScreenState extends State<AuthScreen> {
             decoration: const InputDecoration(labelText: 'Senha', hintText: 'Mínimo de 6 caracteres'),
             validator: (v) => (v ?? '').length >= 6 ? null : 'Mínimo de 6 caracteres',
           ),
+          if (creating) ...[
+            _gap(),
+            TextFormField(
+              controller: confirm,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Confirmar senha'),
+              validator: (v) => v == password.text ? null : 'As senhas não conferem',
+            ),
+          ],
           if (!creating) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: _forgot, child: const Text('Esqueci minha senha'))),
           _gap(),
           DropdownButtonFormField<String>(
-            initialValue: role,
-            decoration: const InputDecoration(labelText: 'Tipo de acesso'),
+            value: role,
+            decoration: InputDecoration(labelText: creating ? 'Criar conta como' : 'Entrar como'),
             items: const [
               DropdownMenuItem(value: 'patient', child: Text('Paciente')),
               DropdownMenuItem(value: 'nutritionist', child: Text('Nutricionista')),

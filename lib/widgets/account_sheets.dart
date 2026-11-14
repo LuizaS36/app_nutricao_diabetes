@@ -22,7 +22,7 @@ void showUserSheet(BuildContext context, AppState state) {
     context,
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        InitialsAvatar(patient ? 'MC' : 'AL', radius: 24),
+        InitialsAvatar(state.initials, radius: 24),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -38,17 +38,6 @@ void showUserSheet(BuildContext context, AppState state) {
       const Text('E-mail', style: TextStyle(fontSize: 11, color: AppColors.muted)),
       Text(p.email, style: const TextStyle(fontWeight: FontWeight.w700)),
       const SizedBox(height: 18),
-      SizedBox(
-        width: double.infinity,
-        child: OutlinedButton(
-          onPressed: () {
-            Navigator.pop(context);
-            state.setRole(patient ? Role.nutritionist : Role.patient);
-          },
-          child: Text('Visualizar como ${patient ? 'Nutricionista' : 'Paciente'}'),
-        ),
-      ),
-      const SizedBox(height: 8),
       SizedBox(
         width: double.infinity,
         child: OutlinedButton(
@@ -103,7 +92,7 @@ class _NotificationFormState extends State<_NotificationForm> {
         const Text('Alertar caso nenhum consumo seja registrado durante o período.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: draft.waterInterval,
+          value: draft.waterInterval,
           items: const [
             DropdownMenuItem(value: '1', child: Text('A cada 1 hora')),
             DropdownMenuItem(value: '2', child: Text('A cada 2 horas')),

@@ -14,8 +14,8 @@ class ProfileScreen extends StatelessWidget {
     final patient = role == Role.patient;
     final p = state.profile;
     final details = patient
-        ? [('Altura', p.detail1), ('Peso atual', p.detail2), ('Meta de peso', p.detail3), ('Nutricionista', 'Dra. Ana Lima')]
-        : [('CRN', p.detail1), ('Especialidade', p.detail2), ('Pacientes ativos', '24'), ('Atendimentos', p.detail3)];
+        ? [('Altura', p.detail1), ('Peso atual', p.detail2), ('Meta de peso', p.detail3), ('Nutricionista', 'Não vinculada')]
+        : [('CRN', p.detail1), ('Especialidade', p.detail2), ('Pacientes ativos', '${state.patients.length}'), ('Atendimentos', p.detail3)];
 
     return ListView(padding: const EdgeInsets.all(16), children: [
       const PageHeading(eyebrow: 'Conta', title: 'Meu perfil', subtitle: 'Mantenha seus dados e preferências atualizados.'),
@@ -27,18 +27,18 @@ class ProfileScreen extends StatelessWidget {
       AppCard(
         padding: const EdgeInsets.all(20),
         child: Row(children: [
-          InitialsAvatar(patient ? 'MC' : 'AL', radius: 36),
+          InitialsAvatar(state.initials, radius: 36),
           const SizedBox(width: 16),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(p.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              Text(patient ? 'Paciente desde fevereiro de 2024' : 'Nutricionista clínica · CRN ${p.detail1}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+              Text(patient ? 'Paciente' : 'Nutricionista clínica · CRN ${p.detail1}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(10)),
-                child: Text(patient ? (p.diabetes.isEmpty ? 'Diabetes Tipo 2' : p.diabetes) : 'Especialista em diabetes', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.olive)),
+                child: Text(patient ? (p.diabetes.isEmpty ? 'Paciente' : p.diabetes) : 'Nutricionista', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.olive)),
               ),
             ]),
           ),
@@ -100,7 +100,7 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 20),
             Text(r.$1, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
             const SizedBox(height: 2),
-            Text(r.$2, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(r.$2.isEmpty ? '—' : r.$2, style: const TextStyle(fontWeight: FontWeight.w700)),
           ],
         ]),
       );

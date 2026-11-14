@@ -20,16 +20,16 @@ class _NutritionistPatientsScreenState extends State<NutritionistPatientsScreen>
     final state = widget.state;
     final q = search.toLowerCase();
     final filtered = state.patients.where((p) => p.name.toLowerCase().contains(q) || p.condition.toLowerCase().contains(q)).toList();
-    final total = state.patients.length + 20;
+    final total = state.patients.length;
 
     return ListView(padding: const EdgeInsets.all(16), children: [
       PageHeading(eyebrow: 'Gestão clínica', title: 'Meus pacientes', subtitle: 'Acompanhe a evolução e os planos de seus $total pacientes ativos.'),
       FilledButton.icon(onPressed: () => showAddPatientSheet(context, state), icon: const Icon(Icons.add), label: const Text('Adicionar paciente')),
       const SizedBox(height: 16),
       Row(children: [
-        Expanded(child: _Overview(icon: Icons.calendar_today_outlined, value: '6', label: 'Consultas esta semana', onTap: () => showAppointmentsSheet(context))),
+        Expanded(child: _Overview(icon: Icons.calendar_today_outlined, value: '0', label: 'Consultas esta semana', onTap: () => showAppointmentsSheet(context))),
         const SizedBox(width: 12),
-        Expanded(child: _Overview(icon: Icons.notifications_none, value: '3', label: 'Precisam de atenção', onTap: () => showAttentionSheet(context))),
+        Expanded(child: _Overview(icon: Icons.notifications_none, value: '${patientsNeedingAttention(state).length}', label: 'Precisam de atenção', onTap: () => showAttentionSheet(context, state))),
       ]),
       const SizedBox(height: 4),
       Card(
@@ -58,7 +58,7 @@ class _NutritionistPatientsScreenState extends State<NutritionistPatientsScreen>
               ]),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PatientDetailScreen(state: state, patient: p))),
             ),
-          if (filtered.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('Nenhum paciente encontrado.', style: TextStyle(color: AppColors.muted))),
+          if (filtered.isEmpty) Padding(padding: const EdgeInsets.all(20), child: Text(state.patients.isEmpty ? 'Você ainda não tem pacientes. Toque em "Adicionar paciente".' : 'Nenhum paciente encontrado.', style: const TextStyle(color: AppColors.muted))),
         ]),
       ),
     ]);

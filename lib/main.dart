@@ -89,16 +89,16 @@ class RootScreen extends StatelessWidget {
                 IconButton(
                   tooltip: 'Notificações',
                   onPressed: () => patient ? showNotificationSettingsSheet(context, state) : showClinicalAlertsSheet(context, state),
-                  icon: patient
+                  icon: (patient || patientsNeedingAttention(state).isEmpty)
                       ? const Icon(Icons.notifications_none)
-                      : Badge(label: const Text('$clinicalAlertCount'), backgroundColor: AppColors.danger, child: const Icon(Icons.notifications_none)),
+                      : Badge(label: Text('${patientsNeedingAttention(state).length}'), backgroundColor: AppColors.danger, child: const Icon(Icons.notifications_none)),
                 ),
                 InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () => showUserSheet(context, state),
                   child: Padding(
                     padding: const EdgeInsets.only(right: 12, left: 4),
-                    child: InitialsAvatar(patient ? 'MC' : 'AL', radius: 16),
+                    child: InitialsAvatar(state.initials, radius: 16),
                   ),
                 ),
               ],
@@ -110,9 +110,7 @@ class RootScreen extends StatelessWidget {
               destinations: [
                 for (final n in nav)
                   NavigationDestination(
-                    icon: n.label == 'Mensagens'
-                        ? Badge(label: const Text('2'), backgroundColor: AppColors.danger, child: Icon(n.icon))
-                        : Icon(n.icon),
+                    icon: Icon(n.icon),
                     label: n.label,
                   ),
               ],

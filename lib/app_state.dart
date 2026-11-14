@@ -1,85 +1,137 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_repository.dart';
 import 'data.dart';
 import 'models.dart';
 
-enum Role { patient, nutritionist }
+export 'models.dart' show Role;
 
 String dateKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-/// Equivale aos useState/localStorage do App() no React.
-/// Qualquer mudança chama notifyListeners() e é salva no aparelho (shared_preferences).
+String initialsOf(String name) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  return parts.take(2).map((p) => p[0]).join().toUpperCase();
+}
+
+const _emptyProfile = ProfileInfo(name: '', email: '', phone: '', birthDate: '', city: '', detail1: '', detail2: '', detail3: '');
+Map<String, bool> _defaultSettings() => {'reminders': true, 'messages': true, 'weekly': false};
+
+/// Estado do app. Os dados de cada usuário ficam guardados POR CONTA
+/// (userdata_<id>): cada login enxerga só o que é seu.
 class AppState extends ChangeNotifier {
-  static const _storageKey = 'equilibra_state_v1';
+  AppState([AuthRepository? auth]) : auth = auth ?? AuthRepository();
+
+  static const _sessionKey = 'session_v1';
+  final AuthRepository auth;
   SharedPreferences? _prefs;
 
   static Future<AppState> load() async {
-    final s = AppState();
-    s._prefs = await SharedPreferences.getInstance();
-    s._restore();
+    final prefs = await SharedPreferences.getInstance();
+    final s = AppState(AuthRepository(prefs));
+    s._prefs = prefs;
+    s._restoreSession();
     return s;
   }
 
-  // ---- Sessão e navegação ----
-  bool authenticated = false;
-  Role role = Role.patient;
+  // ---- Sessão ----
+  Account? account;
+  bool get authenticated => account != null;
+  Role get role => account?.role ?? Role.patient;
+
   int tab = 0;
   String messageTarget = ''; // contato a abrir na aba Mensagens
 
-  // ---- Paciente ----
-  double water = 1.5;
-  bool confetti = false;
-  final List<FoodLog> foodLogs = [];
-  final List<GlucoseLog> glucoseLogs = initialGlucose();
-  final List<Medication> medications = initialMedications();
+  // ---- Dados da conta atual ----
+  ProfileInfo profile = _emptyProfile;
+  Map<String, bool> settings = _defaultSettings();
   NotificationPrefs notif = NotificationPrefs();
 
-  // ---- Nutricionista ----
-  final List<Patient> patients = [...initialPatients];
+  // Paciente
+  double water = 0;
+  bool confetti = false;
+  final List<FoodLog> foodLogs = [];
+  final List<GlucoseLog> glucoseLogs = [];
+  final List<Medication> medications = [];
+
+  // Nutricionista
+  final List<Patient> patients = [];
   final Map<int, Map<String, DietEntry>> _diets = {};
 
-  // ---- Perfis e configurações ----
-  final Map<Role, ProfileInfo> profiles = {
-    Role.patient: const ProfileInfo(
-      name: 'Marina Costa', email: 'marina.costa@email.com', phone: '(11) 98765-4321',
-      birthDate: '14 de setembro de 1988', city: 'São Paulo, SP',
-      detail1: '1,67 m', detail2: '72,4 kg', detail3: '68 kg', diabetes: 'Diabetes Tipo 2',
-    ),
-    Role.nutritionist: const ProfileInfo(
-      name: 'Dra. Ana Lima', email: 'ana.lima@equilibra.com', phone: '(11) 98765-4321',
-      birthDate: '08 de abril de 1985', city: 'São Paulo, SP',
-      detail1: '12345', detail2: 'Nutrição clínica', detail3: 'Seg a Sex, 08h às 18h',
-    ),
-  };
-  final Map<String, Map<String, bool>> settings = {
-    'patient': {'reminders': true, 'messages': true, 'weekly': false},
-    'nutritionist': {'reminders': true, 'messages': true, 'weekly': false},
-  };
+  String get firstName {
+    final n = profile.name.trim();
+    return n.isEmpty ? 'Usuário' : n.split(RegExp(r'\s+')).first;
+  }
 
-  ProfileInfo get profile => profiles[role]!;
+  String get initials => initialsOf(profile.name);
 
-  // ---- Ações: sessão ----
-  void authenticate(Role r, {bool creating = false, String name = '', String email = '', String phone = '', String birthDate = '', String city = ''}) {
-    if (creating) {
-      profiles[r] = profiles[r]!.copyWith(name: name, email: email, phone: phone, birthDate: birthDate, city: city);
-    }
-    role = r;
-    tab = 0;
-    authenticated = true;
-    notifyListeners();
+  // ---- Autenticação ----
+
+  /// Cria a conta no banco do [role] escolhido. Retorna a mensagem de erro, ou null se deu certo.
+  String? signUp({
+    required Role role,
+    required String name,
+    required String email,
+    required String password,
+    String phone = '',
+    String birthDate = '',
+    String city = '',
+  }) {
+    final acc = auth.register(role, email, password);
+    if (acc == null) return 'Este e-mail já está cadastrado.';
+    _beginSession(
+      acc,
+      fresh: ProfileInfo(name: name.trim(), email: acc.email, phone: phone, birthDate: birthDate, city: city.trim(), detail1: '', detail2: '', detail3: ''),
+    );
+    return null;
+  }
+
+  /// Só entra se e-mail, senha E tipo de acesso baterem com uma conta existente.
+  String? signIn({required Role role, required String email, required String password}) {
+    final acc = auth.login(role, email, password);
+    if (acc == null) return 'E-mail, senha ou tipo de acesso incorretos.';
+    _beginSession(acc);
+    return null;
   }
 
   void logout() {
-    authenticated = false;
-    role = Role.patient;
+    account = null;
     tab = 0;
     messageTarget = '';
+    _resetData();
     notifyListeners();
   }
 
-  void setRole(Role r) { role = r; tab = 0; messageTarget = ''; notifyListeners(); }
+  void _beginSession(Account acc, {ProfileInfo? fresh, bool notify = true}) {
+    account = acc;
+    tab = 0;
+    messageTarget = '';
+    _resetData();
+    if (fresh != null) {
+      profile = fresh;
+    } else {
+      profile = _emptyProfile.copyWith(email: acc.email);
+      _restoreUserData();
+    }
+    if (notify) notifyListeners();
+  }
+
+  void _resetData() {
+    water = 0;
+    confetti = false;
+    foodLogs.clear();
+    glucoseLogs.clear();
+    medications.clear();
+    patients.clear();
+    _diets.clear();
+    notif = NotificationPrefs();
+    settings = _defaultSettings();
+    profile = _emptyProfile;
+  }
+
+  // ---- Navegação ----
   void setTab(int i) { tab = i; messageTarget = ''; notifyListeners(); }
 
   /// Abre a aba Mensagens já na conversa com [name].
@@ -89,7 +141,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- Ações: paciente ----
+  // ---- Paciente ----
   void addWater() {
     final before = water;
     water = double.parse((water + 0.25).toStringAsFixed(2));
@@ -105,7 +157,7 @@ class AppState extends ChangeNotifier {
   void removeMedication(int id) { medications.removeWhere((m) => m.id == id); notifyListeners(); }
   void saveNotif(NotificationPrefs p) { notif = p.copy(); notifyListeners(); }
 
-  // ---- Ações: nutricionista ----
+  // ---- Nutricionista ----
   void addPatient(Patient p) { patients.add(p); notifyListeners(); }
 
   /// Dieta do paciente (se ainda não foi editada, usa o plano padrão).
@@ -118,12 +170,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- Ações: perfil ----
-  void saveProfile(Role r, ProfileInfo p) { profiles[r] = p; notifyListeners(); }
+  // ---- Perfil ----
+  void saveProfile(ProfileInfo p) { profile = p; notifyListeners(); }
 
-  bool setting(Role r, String key) => settings[r.name]![key] ?? false;
+  bool setting(Role r, String key) => settings[key] ?? false;
   void toggleSetting(Role r, String key) {
-    settings[r.name]![key] = !setting(r, key);
+    settings[key] = !setting(r, key);
     notifyListeners();
   }
 
@@ -137,61 +189,65 @@ class AppState extends ChangeNotifier {
   void _persist() {
     final p = _prefs;
     if (p == null) return;
-    p.setString(_storageKey, jsonEncode(_toJson()));
+    final acc = account;
+    if (acc == null) {
+      p.remove(_sessionKey);
+      return;
+    }
+    p.setString(_sessionKey, jsonEncode({'id': acc.id, 'role': acc.role.name}));
+    p.setString('userdata_${acc.id}', jsonEncode(_userJson()));
   }
 
-  Map<String, dynamic> _toJson() => {
-        'authenticated': authenticated,
-        'role': role.name,
+  Map<String, dynamic> _userJson() => {
         'water': water,
         'foodLogs': foodLogs.map((e) => e.toJson()).toList(),
         'glucoseLogs': glucoseLogs.map((e) => e.toJson()).toList(),
         'medications': medications.map((e) => e.toJson()).toList(),
         'patients': patients.map((e) => e.toJson()).toList(),
         'diets': _diets.map((k, v) => MapEntry('$k', v.map((mk, e) => MapEntry(mk, e.toJson())))),
-        'profiles': {for (final e in profiles.entries) e.key.name: e.value.toJson()},
+        'profile': profile.toJson(),
         'settings': settings,
         'notif': notif.toJson(),
       };
 
-  void _restore() {
-    final raw = _prefs?.getString(_storageKey);
+  void _restoreSession() {
+    final raw = _prefs?.getString(_sessionKey);
     if (raw == null) return;
     try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
-      authenticated = j['authenticated'] == true;
-      role = j['role'] == 'nutritionist' ? Role.nutritionist : Role.patient;
-      water = (j['water'] as num?)?.toDouble() ?? water;
+      final role = j['role'] == 'nutritionist' ? Role.nutritionist : Role.patient;
+      final acc = auth.byId(role, j['id'] as String);
+      if (acc != null) _beginSession(acc, notify: false);
+    } catch (_) {}
+  }
+
+  void _restoreUserData() {
+    final acc = account;
+    final raw = acc == null ? null : _prefs?.getString('userdata_${acc.id}');
+    if (raw == null) return;
+    try {
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      water = (j['water'] as num?)?.toDouble() ?? 0;
 
       List<T> list<T>(String k, T Function(Map<String, dynamic>) f) =>
-          (j[k] as List).map((e) => f(Map<String, dynamic>.from(e as Map))).toList();
+          ((j[k] as List?) ?? const []).map((e) => f(Map<String, dynamic>.from(e as Map))).toList();
 
-      if (j['foodLogs'] != null) { foodLogs..clear()..addAll(list('foodLogs', FoodLog.fromJson)); }
-      if (j['glucoseLogs'] != null) { glucoseLogs..clear()..addAll(list('glucoseLogs', GlucoseLog.fromJson)); }
-      if (j['medications'] != null) { medications..clear()..addAll(list('medications', Medication.fromJson)); }
-      if (j['patients'] != null) { patients..clear()..addAll(list('patients', Patient.fromJson)); }
+      foodLogs..clear()..addAll(list('foodLogs', FoodLog.fromJson));
+      glucoseLogs..clear()..addAll(list('glucoseLogs', GlucoseLog.fromJson));
+      medications..clear()..addAll(list('medications', Medication.fromJson));
+      patients..clear()..addAll(list('patients', Patient.fromJson));
 
       (j['diets'] as Map?)?.forEach((k, v) {
         _diets[int.parse(k as String)] = {
           for (final e in (v as Map).entries) e.key as String: DietEntry.fromJson(Map<String, dynamic>.from(e.value as Map)),
         };
       });
-      final pr = j['profiles'] as Map?;
-      if (pr != null) {
-        for (final r in Role.values) {
-          final v = pr[r.name];
-          if (v != null) profiles[r] = ProfileInfo.fromJson(Map<String, dynamic>.from(v as Map));
-        }
-      }
+      if (j['profile'] != null) profile = ProfileInfo.fromJson(Map<String, dynamic>.from(j['profile'] as Map));
       final st = j['settings'] as Map?;
-      if (st != null) {
-        for (final e in st.entries) {
-          settings[e.key as String] = {for (final x in (e.value as Map).entries) x.key as String: x.value == true};
-        }
-      }
+      if (st != null) settings = {for (final e in st.entries) e.key as String: e.value == true};
       if (j['notif'] != null) notif = NotificationPrefs.fromJson(Map<String, dynamic>.from(j['notif'] as Map));
     } catch (_) {
-      // dado salvo inválido: ignora e usa os valores padrão
+      // dado salvo inválido: segue com os valores vazios
     }
   }
 }
