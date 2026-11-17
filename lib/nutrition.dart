@@ -47,8 +47,13 @@ class Nutrition {
   final TacoDb taco = TacoDb();
   final Map<int, Alimento> _cache = {};
 
+  Future<void>? _initFuture;
+
   /// Carrega na memória os alimentos do plano (assim as telas leem sem await).
-  Future<void> init() async {
+  /// Pode ser chamado várias vezes: só carrega uma vez.
+  Future<void> init() => _initFuture ??= _load();
+
+  Future<void> _load() async {
     for (final items in planByMeal.values) {
       for (final i in items) {
         if (_cache.containsKey(i.tacoId)) continue;

@@ -19,7 +19,18 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Stack(
     children: [
-      _content(context),
+      FutureBuilder<void>(
+        future: Nutrition.instance.init(),
+        builder: (context, snap) {
+          if (snap.hasError)
+            return Center(
+              child: Text('Erro ao abrir o banco da TACO:\n${snap.error}'),
+            );
+          if (snap.connectionState != ConnectionState.done)
+            return const Center(child: CircularProgressIndicator());
+          return _content(context);
+        },
+      ),
       if (state.confetti)
         Positioned.fill(
           child: IgnorePointer(child: ConfettiLayer(onDone: state.endConfetti)),
@@ -43,9 +54,9 @@ class DashboardScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const PageHeading(
+        PageHeading(
           eyebrow: 'Hoje',
-          title: 'Olá, Marina!',
+          title: 'Olá, ${_firstName(state.profile.name)}!',
           subtitle: 'Seu dia está indo muito bem. Continue assim.',
         ),
         FilledButton.icon(
@@ -304,7 +315,7 @@ class DashboardScreen extends StatelessWidget {
                   if (state.water >= 2.5)
                     const Icon(Icons.star, color: Color(0xFFD4A928)),
                   Text(
-                    '${state.water.toStringAsFixed(1)}L / 2,5L',
+                    '${_thousands((state.water * 1000).round())} mL / 2.500 mL',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
@@ -324,7 +335,7 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${(state.water / 0.25).round()} copos de 250ml${state.water >= 2.5 ? ' · Meta alcançada' : ''}',
+                      '${_thousands((state.water * 1000).round())} mL bebidos${state.water >= 2.5 ? ' · Meta alcançada' : ''}',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,
@@ -332,9 +343,9 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   OutlinedButton.icon(
-                    onPressed: state.addWater,
+                    onPressed: () => showAddWaterSheet(context, state),
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Adicionar copo'),
+                    label: const Text('Registrar água'),
                   ),
                 ],
               ),
@@ -424,3 +435,9 @@ class _Macro extends StatelessWidget {
 /// 1280 -> "1.280"
 String _thousands(int n) =>
     n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
+
+/// "Marina Costa" -> "Marina"
+String _firstName(String full) {
+  final p = full.trim().split(RegExp(r'\s+'));
+  return p.first.isEmpty ? 'tudo bem' : p.first;
+}

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'app_state.dart';
+import 'auth_service.dart';
+import 'nutrition.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/glucose_screen.dart';
@@ -12,19 +14,13 @@ import 'theme.dart';
 import 'widgets/account_sheets.dart';
 import 'widgets/common.dart';
 import 'widgets/nutri_sheets.dart';
-import 'taco_db.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final taco = TacoDb();
-  final iogurte = (await taco.buscar('iogurte')).first;
-  debugPrint(
-    '${iogurte.nome} 170 g = ${Porcao(iogurte, 170).macros.kcal.round()} kcal',
-  );
-  for (final s in await taco.substituir(iogurte, 170)) {
-    debugPrint('Troca: ${s.porcao.alimento.nome} ${s.porcao.gramas.round()} g');
-  }
+  await Nutrition.instance.init(); // banco da TACO
+  await AuthService.init(); // Supabase (se configurado)
   final state = await AppState.load();
+  await state.syncSession(); // confere se ainda ha login valido
   runApp(EquilibraApp(state: state));
 }
 
@@ -116,7 +112,10 @@ class RootScreen extends StatelessWidget {
               onTap: () => showUserSheet(context, state),
               child: Padding(
                 padding: const EdgeInsets.only(right: 12, left: 4),
-                child: InitialsAvatar(patient ? 'MC' : 'AL', radius: 16),
+                child: InitialsAvatar(
+                  _initials(state.profile.name),
+                  radius: 16,
+                ),
               ),
             ),
           ],
@@ -142,4 +141,15 @@ class RootScreen extends StatelessWidget {
       );
     },
   );
+}
+
+/// "Marina Costa" -> "MC"
+String _initials(String name) {
+  final p = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((s) => s.isNotEmpty)
+      .toList();
+  if (p.isEmpty) return '?';
+  return (p.length == 1 ? p.first[0] : p.first[0] + p.last[0]).toUpperCase();
 }

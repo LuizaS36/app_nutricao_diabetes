@@ -24,7 +24,20 @@ class _MealsScreenState extends State<MealsScreen> {
   DateTime _day(int off) => DateTime.now().add(Duration(days: off));
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FutureBuilder<void>(
+    future: Nutrition.instance.init(),
+    builder: (context, snap) {
+      if (snap.hasError)
+        return Center(
+          child: Text('Erro ao abrir o banco da TACO:\n${snap.error}'),
+        );
+      if (snap.connectionState != ConnectionState.done)
+        return const Center(child: CircularProgressIndicator());
+      return _content(context);
+    },
+  );
+
+  Widget _content(BuildContext context) {
     final state = widget.state;
     final selectedDate = dateKey(_day(selected));
     return ListView(
@@ -97,6 +110,22 @@ class _MealsScreenState extends State<MealsScreen> {
     );
   }
 
+  /// Exclui um registro de consumo (com opção de desfazer).
+  void _deleteFood(BuildContext context, AppState state, FoodLog f) {
+    state.removeFood(f.id);
+    final bar = ScaffoldMessenger.of(context);
+    bar.hideCurrentSnackBar();
+    bar.showSnackBar(
+      SnackBar(
+        content: Text('${f.name} excluído.'),
+        action: SnackBarAction(
+          label: 'Desfazer',
+          onPressed: () => state.addFood(f),
+        ),
+      ),
+    );
+  }
+
   Widget _mealCard(BuildContext context, AppState state, Meal m, String date) {
     final nutri = Nutrition.instance;
     final List<Porcao> portions = nutri.portions(m.key);
@@ -105,6 +134,10 @@ class _MealsScreenState extends State<MealsScreen> {
         .where((f) => f.meal == m.key && f.date == date)
         .toList();
     final consumed = added.fold<int>(0, (s, f) => s + f.kcal);
+    final replaced = <String>{
+      for (final f in added)
+        if (f.replaces != null) f.replaces!,
+    };
     return Card(
       child: ExpansionTile(
         initiallyExpanded: m.key == 'Café da manhã',
@@ -155,6 +188,16 @@ class _MealsScreenState extends State<MealsScreen> {
               style: TextStyle(fontSize: 13, color: AppColors.teal),
             ),
             children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'Escolha o item da dieta que você trocou:',
+                    style: TextStyle(fontSize: 11, color: AppColors.muted),
+                  ),
+                ),
+              ),
               for (final p in portions)
                 ListTile(
                   dense: true,
@@ -164,7 +207,7 @@ class _MealsScreenState extends State<MealsScreen> {
                     style: const TextStyle(fontSize: 13),
                   ),
                   subtitle: Text(
-                    '${fmtGramas(p.gramas)} g · ${fmtNum(p.macros.kcal, 0)} kcal',
+                    '${fmtGramas(p.gramas)} g · ${fmtNum(p.macros.kcal, 0)} kcal${replaced.contains(p.alimento.nome) ? ' · já substituído' : ''}',
                     style: const TextStyle(fontSize: 11),
                   ),
                   trailing: const Icon(
@@ -211,7 +254,18 @@ class _MealsScreenState extends State<MealsScreen> {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(f.name),
-                subtitle: Text('${f.amount} · ${f.kcal} kcal'),
+                subtitle: Text(
+                  '${f.amount} · ${f.kcal} kcal${f.replaces != null ? ' · no lugar de ${f.replaces}' : ''}',
+                ),
+                trailing: IconButton(
+                  tooltip: 'Excluir registro',
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: AppColors.muted,
+                  ),
+                  onPressed: () => _deleteFood(context, state, f),
+                ),
               ),
           ],
           ExpansionTile(
