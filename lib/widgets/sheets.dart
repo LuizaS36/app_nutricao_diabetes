@@ -125,8 +125,9 @@ class _FoodFormState extends State<_FoodForm> {
   void initState() {
     super.initState();
     selected = widget.alimento;
-    if (selected == null && widget.food.trim().length >= 2)
+    if (selected == null && widget.food.trim().length >= 2) {
       _search(widget.food);
+    }
   }
 
   @override
@@ -602,9 +603,10 @@ class _MedicationFormState extends State<_MedicationForm> {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-    if (t != null)
+    if (t != null) {
       time.text =
           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   @override

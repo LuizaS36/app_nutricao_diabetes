@@ -44,7 +44,7 @@ class AuthService {
     try {
       await Supabase.initialize(
         url: _url,
-        anonKey: SupabaseConfig.anonKey.trim(),
+        publishableKey: SupabaseConfig.anonKey.trim(),
       );
       _ready = true;
       debugPrint('[Supabase] iniciado em $_url');
@@ -68,8 +68,9 @@ class AuthService {
     String birthDate = '',
     String city = '',
   }) async {
-    if (!enabled)
+    if (!enabled) {
       return const AuthResult(ok: false, message: 'Supabase não configurado.');
+    }
     try {
       final res = await _c.auth.signUp(
         email: email.trim(),
@@ -85,11 +86,12 @@ class AuthService {
       debugPrint(
         '[Supabase] signUp ok: user=${res.user?.id} sessao=${res.session != null}',
       );
-      if (res.user == null)
+      if (res.user == null) {
         return const AuthResult(
           ok: false,
           message: 'Não foi possível criar a conta.',
         );
+      }
       final precisaConfirmar = res.session == null;
       return AuthResult(
         ok: true,
@@ -111,8 +113,9 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    if (!enabled)
+    if (!enabled) {
       return const AuthResult(ok: false, message: 'Supabase não configurado.');
+    }
     try {
       await _c.auth.signInWithPassword(email: email.trim(), password: password);
       debugPrint('[Supabase] signIn ok');
@@ -148,16 +151,21 @@ class AuthService {
     final m = msg.toLowerCase();
     if (m.contains('invalid login')) return 'E-mail ou senha incorretos.';
     if (m.contains('already registered') ||
-        m.contains('already been registered'))
+        m.contains('already been registered')) {
       return 'Este e-mail já está cadastrado.';
-    if (m.contains('at least'))
+    }
+    if (m.contains('at least')) {
       return 'A senha precisa ter pelo menos 6 caracteres.';
-    if (m.contains('not confirmed'))
+    }
+    if (m.contains('not confirmed')) {
       return 'Confirme seu e-mail antes de entrar.';
-    if (m.contains('valid email') || m.contains('invalid email'))
+    }
+    if (m.contains('valid email') || m.contains('invalid email')) {
       return 'E-mail inválido.';
-    if (m.contains('rate limit'))
+    }
+    if (m.contains('rate limit')) {
       return 'Muitas tentativas. Aguarde um pouco e tente de novo.';
+    }
     return msg;
   }
 }

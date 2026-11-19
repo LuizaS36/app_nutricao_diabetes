@@ -27,12 +27,14 @@ class _MealsScreenState extends State<MealsScreen> {
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: Nutrition.instance.init(),
     builder: (context, snap) {
-      if (snap.hasError)
+      if (snap.hasError) {
         return Center(
           child: Text('Erro ao abrir o banco da TACO:\n${snap.error}'),
         );
-      if (snap.connectionState != ConnectionState.done)
+      }
+      if (snap.connectionState != ConnectionState.done) {
         return const Center(child: CircularProgressIndicator());
+      }
       return _content(context);
     },
   );

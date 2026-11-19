@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+#ignora caches locais e pastas de build
+android/.gradle/
+android/local.properties
+
 # Symbolication related
 app.*.symbols
 

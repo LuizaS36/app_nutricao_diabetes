@@ -390,10 +390,11 @@ class AppState extends ChangeNotifier {
       if (pr != null) {
         for (final r in Role.values) {
           final v = pr[r.name];
-          if (v != null)
+          if (v != null) {
             profiles[r] = ProfileInfo.fromJson(
               Map<String, dynamic>.from(v as Map),
             );
+          }
         }
       }
       final st = j['settings'] as Map?;
@@ -405,10 +406,11 @@ class AppState extends ChangeNotifier {
           };
         }
       }
-      if (j['notif'] != null)
+      if (j['notif'] != null) {
         notif = NotificationPrefs.fromJson(
           Map<String, dynamic>.from(j['notif'] as Map),
         );
+      }
     } catch (_) {
       // dado salvo inválido: ignora e usa os valores padrão
     }
