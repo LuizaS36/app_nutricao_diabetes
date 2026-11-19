@@ -7,60 +7,40 @@ import 'data.dart';
 import 'models.dart';
 import 'auth_service.dart';
 
-export 'models.dart' show Role;
+enum Role { patient, nutritionist }
 
 String dateKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-String initialsOf(String name) {
-  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-  if (parts.isEmpty) return '?';
-  return parts.take(2).map((p) => p[0]).join().toUpperCase();
-}
-
-const _emptyProfile = ProfileInfo(name: '', email: '', phone: '', birthDate: '', city: '', detail1: '', detail2: '', detail3: '');
-Map<String, bool> _defaultSettings() => {'reminders': true, 'messages': true, 'weekly': false};
-
-///try replacing `<` with `&lt;` and `>` with `&gt;`.
-/// Estado do app. Os dados de cada usuário ficam guardados POR CONTA
-/// (userdata_&lt;id&gt;): cada login enxerga só o que é seu.
+/// Equivale aos useState/localStorage do App() no React.
+/// Qualquer mudança chama notifyListeners() e é salva no aparelho (shared_preferences).
 class AppState extends ChangeNotifier {
-  AppState([AuthRepository? auth]) : auth = auth ?? AuthRepository();
-
-  static const _sessionKey = 'session_v1';
-  final AuthRepository auth;
+  static const _storageKey = 'equilibra_state_v1';
   SharedPreferences? _prefs;
 
   static Future<AppState> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final s = AppState(AuthRepository(prefs));
-    s._prefs = prefs;
-    s._restoreSession();
+    final s = AppState();
+    s._prefs = await SharedPreferences.getInstance();
+    s._restore();
     return s;
   }
 
-  // ---- Sessão ----
-  Account? account;
-  bool get authenticated => account != null;
-  Role get role => account?.role ?? Role.patient;
-
+  // ---- Sessão e navegação ----
+  bool authenticated = false;
+  Role role = Role.patient;
   int tab = 0;
   String messageTarget = ''; // contato a abrir na aba Mensagens
 
-  // ---- Dados da conta atual ----
-  ProfileInfo profile = _emptyProfile;
-  Map<String, bool> settings = _defaultSettings();
-  NotificationPrefs notif = NotificationPrefs();
-
-  // Paciente
-  double water = 0;
+  // ---- Paciente ----
+  double water = 1.5;
   bool confetti = false;
   final List<FoodLog> foodLogs = [];
-  final List<GlucoseLog> glucoseLogs = [];
-  final List<Medication> medications = [];
+  final List<GlucoseLog> glucoseLogs = initialGlucose();
+  final List<Medication> medications = initialMedications();
+  NotificationPrefs notif = NotificationPrefs();
 
-  // Nutricionista
-  final List<Patient> patients = [];
+  // ---- Nutricionista ----
+  final List<Patient> patients = [...initialPatients];
   final Map<int, Map<String, DietEntry>> _diets = {};
 
   // ---- Perfis e configurações ----
@@ -125,7 +105,6 @@ class AppState extends ChangeNotifier {
     role = Role.patient;
     tab = 0;
     messageTarget = '';
-    _resetData();
     notifyListeners();
   }
 
@@ -327,9 +306,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool setting(Role r, String key) => settings[key] ?? false;
+  bool setting(Role r, String key) => settings[r.name]![key] ?? false;
   void toggleSetting(Role r, String key) {
-    settings[key] = !setting(r, key);
+    settings[r.name]![key] = !setting(r, key);
     notifyListeners();
   }
 
@@ -343,13 +322,7 @@ class AppState extends ChangeNotifier {
   void _persist() {
     final p = _prefs;
     if (p == null) return;
-    final acc = account;
-    if (acc == null) {
-      p.remove(_sessionKey);
-      return;
-    }
-    p.setString(_sessionKey, jsonEncode({'id': acc.id, 'role': acc.role.name}));
-    p.setString('userdata_${acc.id}', jsonEncode(_userJson()));
+    p.setString(_storageKey, jsonEncode(_toJson()));
   }
 
   Map<String, dynamic> _toJson() => {
@@ -370,24 +343,14 @@ class AppState extends ChangeNotifier {
     'notif': notif.toJson(),
   };
 
-  void _restoreSession() {
-    final raw = _prefs?.getString(_sessionKey);
+  void _restore() {
+    final raw = _prefs?.getString(_storageKey);
     if (raw == null) return;
     try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
-      final role = j['role'] == 'nutritionist' ? Role.nutritionist : Role.patient;
-      final acc = auth.byId(role, j['id'] as String);
-      if (acc != null) _beginSession(acc, notify: false);
-    } catch (_) {}
-  }
-
-  void _restoreUserData() {
-    final acc = account;
-    final raw = acc == null ? null : _prefs?.getString('userdata_${acc.id}');
-    if (raw == null) return;
-    try {
-      final j = jsonDecode(raw) as Map<String, dynamic>;
-      water = (j['water'] as num?)?.toDouble() ?? 0;
+      authenticated = j['authenticated'] == true;
+      role = j['role'] == 'nutritionist' ? Role.nutritionist : Role.patient;
+      water = (j['water'] as num?)?.toDouble() ?? water;
 
       List<T> list<T>(String k, T Function(Map<String, dynamic>) f) =>
           (j[k] as List)
@@ -447,7 +410,7 @@ class AppState extends ChangeNotifier {
           Map<String, dynamic>.from(j['notif'] as Map),
         );
     } catch (_) {
-      // dado salvo inválido: segue com os valores vazios
+      // dado salvo inválido: ignora e usa os valores padrão
     }
   }
 }

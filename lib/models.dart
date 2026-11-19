@@ -1,5 +1,3 @@
-enum Role { patient, nutritionist }
-
 class GlucoseLog {
   GlucoseLog({
     required this.id,

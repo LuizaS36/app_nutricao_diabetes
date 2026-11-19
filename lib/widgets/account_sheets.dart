@@ -22,7 +22,7 @@ void showUserSheet(BuildContext context, AppState state) {
     context,
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        InitialsAvatar(state.initials, radius: 24),
+        InitialsAvatar(patient ? 'MC' : 'AL', radius: 24),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -38,6 +38,17 @@ void showUserSheet(BuildContext context, AppState state) {
       const Text('E-mail', style: TextStyle(fontSize: 11, color: AppColors.muted)),
       Text(p.email, style: const TextStyle(fontWeight: FontWeight.w700)),
       const SizedBox(height: 18),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            state.setRole(patient ? Role.nutritionist : Role.patient);
+          },
+          child: Text('Visualizar como ${patient ? 'Nutricionista' : 'Paciente'}'),
+        ),
+      ),
+      const SizedBox(height: 8),
       SizedBox(
         width: double.infinity,
         child: OutlinedButton(

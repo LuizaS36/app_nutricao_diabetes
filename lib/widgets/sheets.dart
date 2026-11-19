@@ -24,7 +24,7 @@ Future<void> _openSheet(BuildContext context, Widget child) =>
     );
 
 /// Registrar alimento. `food` pré-preenche a busca; `alimento` + `gramas`
-/// já abrem com o alimento escolhido (usado pela substituição).
+/// já abrem com o alimento escolhido. `replaces` = item da dieta que foi trocado.
 void showAddFoodSheet(
   BuildContext context,
   AppState state, {
@@ -32,6 +32,7 @@ void showAddFoodSheet(
   String food = '',
   Alimento? alimento,
   double? gramas,
+  String? replaces,
   required String date,
 }) => _openSheet(
   context,
@@ -41,6 +42,7 @@ void showAddFoodSheet(
     food: food,
     alimento: alimento,
     gramas: gramas,
+    replaces: replaces,
     date: date,
   ),
 );
@@ -71,6 +73,9 @@ void showAddGlucoseSheet(BuildContext context, AppState state) =>
 void showAddMedicationSheet(BuildContext context, AppState state) =>
     _openSheet(context, _MedicationForm(state: state));
 
+void showAddWaterSheet(BuildContext context, AppState state) =>
+    _openSheet(context, _WaterForm(state: state));
+
 class _SheetTitle extends StatelessWidget {
   const _SheetTitle(this.text);
   final String text;
@@ -93,11 +98,13 @@ class _FoodForm extends StatefulWidget {
     required this.date,
     this.alimento,
     this.gramas,
+    this.replaces,
   });
   final AppState state;
   final String meal, food, date;
   final Alimento? alimento;
   final double? gramas;
+  final String? replaces;
   @override
   State<_FoodForm> createState() => _FoodFormState();
 }
@@ -118,9 +125,8 @@ class _FoodFormState extends State<_FoodForm> {
   void initState() {
     super.initState();
     selected = widget.alimento;
-    if (selected == null && widget.food.trim().length >= 2){
+    if (selected == null && widget.food.trim().length >= 2)
       _search(widget.food);
-    }
   }
 
   @override
@@ -164,7 +170,19 @@ class _FoodFormState extends State<_FoodForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SheetTitle('Registrar refeição'),
+          _SheetTitle(
+            widget.replaces == null
+                ? 'Registrar refeição'
+                : 'Registrar substituição',
+          ),
+          if (widget.replaces != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'No lugar de: ${widget.replaces}',
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
           DropdownButtonFormField<String>(
             initialValue: meal,
             decoration: const InputDecoration(labelText: 'Refeição'),
@@ -275,6 +293,7 @@ class _FoodFormState extends State<_FoodForm> {
                             fat: mm.gordura,
                             tacoId: a.id,
                             grams: gg,
+                            replaces: widget.replaces,
                           ),
                         );
                         Navigator.pop(context);
@@ -311,6 +330,47 @@ class _SubstituteList extends StatefulWidget {
 class _SubstituteListState extends State<_SubstituteList> {
   late final Future<List<Substituicao>> _future = Nutrition.instance.taco
       .substituir(widget.original, widget.grams);
+  final search = TextEditingController();
+  List<Alimento> results = [];
+  bool noResult = false;
+  int _req = 0;
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String q) async {
+    final id = ++_req;
+    if (q.trim().length < 2) {
+      setState(() {
+        results = [];
+        noResult = false;
+      });
+      return;
+    }
+    final r = await Nutrition.instance.taco.buscar(q.trim(), limite: 6);
+    if (!mounted || id != _req) return; // ignora resposta antiga
+    setState(() {
+      results = r;
+      noResult = r.isEmpty;
+    });
+  }
+
+  /// Fecha esta folha e abre o registro já com o alimento escolhido.
+  void _escolher(Alimento a, {double? gramas}) {
+    Navigator.pop(context);
+    showAddFoodSheet(
+      widget.host,
+      widget.state,
+      meal: widget.meal,
+      date: widget.date,
+      alimento: a,
+      gramas: gramas,
+      replaces: widget.original.nome,
+    );
+  }
 
   Widget _tile(BuildContext context, Substituicao s) {
     final a = s.porcao.alimento;
@@ -331,17 +391,7 @@ class _SubstituteListState extends State<_SubstituteList> {
         style: const TextStyle(fontSize: 12),
       ),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        Navigator.pop(context);
-        showAddFoodSheet(
-          widget.host,
-          widget.state,
-          meal: widget.meal,
-          date: widget.date,
-          alimento: a,
-          gramas: s.porcao.gramas,
-        );
-      },
+      onTap: () => _escolher(a, gramas: s.porcao.gramas),
     );
   }
 
@@ -355,7 +405,7 @@ class _SubstituteListState extends State<_SubstituteList> {
       children: [
         _SheetTitle('Substituir ${widget.original.nome}'),
         Text(
-          'Original: ${fmtGramas(widget.grams)} g · ${fmtNum(bm.kcal, 0)} kcal · P ${fmtNum(bm.proteina)} g · C ${fmtNum(bm.carbo)} g · G ${fmtNum(bm.gordura)} g',
+          'Dieta: ${fmtGramas(widget.grams)} g · ${fmtNum(bm.kcal, 0)} kcal · P ${fmtNum(bm.proteina)} g · C ${fmtNum(bm.carbo)} g · G ${fmtNum(bm.gordura)} g',
           style: const TextStyle(fontSize: 12, color: AppColors.muted),
         ),
         const SizedBox(height: 4),
@@ -389,6 +439,43 @@ class _SubstituteListState extends State<_SubstituteList> {
             return Column(children: [for (final s in list) _tile(context, s)]);
           },
         ),
+        const Divider(height: 28),
+        const Text(
+          'Comeu outra coisa?',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'Busque o alimento que você realmente comeu e informe a quantidade.',
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: search,
+          onChanged: _search,
+          decoration: const InputDecoration(
+            labelText: 'Buscar alimento',
+            hintText: 'Ex.: arroz branco',
+            prefixIcon: Icon(Icons.search, size: 18),
+          ),
+        ),
+        for (final r in results)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text(r.nome),
+            subtitle: Text('${fmtNum(r.por100g.kcal, 0)} kcal por 100 g'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _escolher(r),
+          ),
+        if (noResult)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Nenhum alimento encontrado na TACO.',
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+          ),
       ],
     );
   }
@@ -515,10 +602,9 @@ class _MedicationFormState extends State<_MedicationForm> {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-    if (t != null){
+    if (t != null)
       time.text =
           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-    }
   }
 
   @override
@@ -596,6 +682,82 @@ class _MedicationFormState extends State<_MedicationForm> {
                 Navigator.pop(context);
               },
               child: const Text('Adicionar à rotina'),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _WaterForm extends StatefulWidget {
+  const _WaterForm({required this.state});
+  final AppState state;
+  @override
+  State<_WaterForm> createState() => _WaterFormState();
+}
+
+class _WaterFormState extends State<_WaterForm> {
+  final _key = GlobalKey<FormState>();
+  final ml = TextEditingController();
+
+  @override
+  void dispose() {
+    ml.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Form(
+    key: _key,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SheetTitle('Registrar água'),
+        TextFormField(
+          controller: ml,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Quantidade',
+            suffixText: 'mL',
+            hintText: 'Ex.: 250',
+          ),
+          validator: (v) {
+            final n = int.tryParse((v ?? '').trim());
+            return (n == null || n < 10 || n > 3000)
+                ? 'Informe um valor entre 10 e 3000 mL'
+                : null;
+          },
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final v in const [150, 200, 250, 300, 500])
+              ActionChip(
+                label: Text('$v mL'),
+                onPressed: () => setState(() => ml.text = '$v'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () {
+                if (!_key.currentState!.validate()) return;
+                widget.state.addWaterMl(int.parse(ml.text.trim()));
+                Navigator.pop(context);
+              },
+              child: const Text('Adicionar'),
             ),
           ],
         ),
