@@ -41,17 +41,6 @@ void showUserSheet(BuildContext context, AppState state) {
       SizedBox(
         width: double.infinity,
         child: OutlinedButton(
-          onPressed: () {
-            Navigator.pop(context);
-            state.setRole(patient ? Role.nutritionist : Role.patient);
-          },
-          child: Text('Visualizar como ${patient ? 'Nutricionista' : 'Paciente'}'),
-        ),
-      ),
-      const SizedBox(height: 8),
-      SizedBox(
-        width: double.infinity,
-        child: OutlinedButton(
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: Color(0xFFF0D8D2))),
           onPressed: () {
             Navigator.pop(context);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import 'dart:math' as math;
+import '../models.dart';
 
 /// Curva definida como no SVG do React: ponto inicial + segmentos cúbicos
 /// (x1,y1,x2,y2,x,y) dentro de uma "viewBox" [vw] x [vh].
@@ -167,4 +169,98 @@ class GlucoseSparkline extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Gráfico das últimas medições, com eixo Y (mg/dL), eixo X (horário) e faixa da meta (70–140).
+class GlucoseHistoryChart extends StatelessWidget {
+  const GlucoseHistoryChart({super.key, required this.logs, this.height = 180, this.maxPoints = 7});
+  final List<GlucoseLog> logs; // mais recente primeiro
+  final double height;
+  final int maxPoints;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = logs.take(maxPoints).toList().reversed.toList(); // do mais antigo ao mais recente
+    if (data.isEmpty) {
+      return SizedBox(
+        height: height,
+        child: const Center(child: Text('Sem medições para mostrar.', style: TextStyle(color: AppColors.muted))),
+      );
+    }
+    return SizedBox(height: height, width: double.infinity, child: CustomPaint(painter: _AxesChartPainter(data)));
+  }
+}
+
+class _AxesChartPainter extends CustomPainter {
+  _AxesChartPainter(this.data);
+  final List<GlucoseLog> data;
+
+  static const double left = 34, right = 8, top = 16, bottom = 22;
+
+  void _text(Canvas c, String t, Offset o, {bool centerX = false, bool alignRight = false}) {
+    final tp = TextPainter(
+      text: TextSpan(text: t, style: const TextStyle(fontSize: 9, color: AppColors.muted)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    var dx = o.dx;
+    if (centerX) dx -= tp.width / 2;
+    if (alignRight) dx -= tp.width;
+    tp.paint(c, Offset(dx, o.dy - tp.height / 2));
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final plot = Rect.fromLTRB(left, top, size.width - right, size.height - bottom);
+    final maxV = data.map((e) => e.value).reduce(math.max);
+    const yMin = 40.0;
+    final yMax = math.max(200, (maxV / 50).ceil() * 50).toDouble();
+    double yOf(num v) => plot.bottom - ((v - yMin) / (yMax - yMin)).clamp(0.0, 1.0) * plot.height;
+
+    // faixa da meta
+    canvas.drawRect(
+      Rect.fromLTRB(plot.left, yOf(140), plot.right, yOf(70)),
+      Paint()..color = AppColors.mint.withValues(alpha: .5),
+    );
+
+    // grade + rótulos do eixo Y
+    final grid = Paint()..color = const Color(0xFFEDF1E3)..strokeWidth = 1;
+    for (var v = 50.0; v <= yMax; v += 50) {
+      canvas.drawLine(Offset(plot.left, yOf(v)), Offset(plot.right, yOf(v)), grid);
+      _text(canvas, '${v.toInt()}', Offset(left - 6, yOf(v)), alignRight: true);
+    }
+    _text(canvas, 'mg/dL', const Offset(0, 6));
+
+    // eixos
+    final axis = Paint()..color = AppColors.muted.withValues(alpha: .5)..strokeWidth = 1;
+    canvas.drawLine(plot.bottomLeft, plot.topLeft, axis);
+    canvas.drawLine(plot.bottomLeft, plot.bottomRight, axis);
+
+    // pontos, linha e rótulos do eixo X
+    final n = data.length;
+    Offset pt(int i) {
+      final x = n == 1 ? plot.center.dx : plot.left + 14 + i * (plot.width - 28) / (n - 1);
+      return Offset(x, yOf(data[i].value));
+    }
+
+    final path = Path()..moveTo(pt(0).dx, pt(0).dy);
+    for (var i = 1; i < n; i++) {
+      path.lineTo(pt(i).dx, pt(i).dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = AppColors.teal
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeJoin = StrokeJoin.round,
+    );
+    for (var i = 0; i < n; i++) {
+      final p = pt(i);
+      canvas.drawCircle(p, 3.5, Paint()..color = data[i].value > 140 ? AppColors.warn : AppColors.teal);
+      _text(canvas, data[i].time, Offset(p.dx, plot.bottom + 12), centerX: true);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AxesChartPainter old) => true;
 }

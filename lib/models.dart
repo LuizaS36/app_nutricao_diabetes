@@ -286,3 +286,13 @@ class NotificationPrefs {
         waterInterval: (j['waterInterval'] as String?) ?? '2',
       );
 }
+class HydrationLog {
+  HydrationLog({required this.id, required this.ml, required this.date, required this.time});
+  final int id;
+  final int ml;
+  final String date; // yyyy-MM-dd
+  final String time; // HH:mm
+  Map<String, dynamic> toJson() => {'id': id, 'ml': ml, 'date': date, 'time': time};
+  factory HydrationLog.fromJson(Map<String, dynamic> j) =>
+      HydrationLog(id: j['id'] as int, ml: j['ml'] as int, date: j['date'] as String, time: j['time'] as String);
+}

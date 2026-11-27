@@ -30,7 +30,7 @@ class AppState extends ChangeNotifier {
   String messageTarget = ''; // contato a abrir na aba Mensagens
 
   // ---- Paciente ----
-  double water = 1.5;
+  double water = 0;
   bool confetti = false;
   final List<FoodLog> foodLogs = [];
   final List<GlucoseLog> glucoseLogs = initialGlucose();

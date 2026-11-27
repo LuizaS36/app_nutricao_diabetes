@@ -213,7 +213,7 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              const MiniGlucoseChart(),
+              GlucoseHistoryChart(logs: state.glucoseLogs, height: 150),
             ],
           ),
         ),

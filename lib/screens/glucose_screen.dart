@@ -107,8 +107,6 @@ class _LogRow extends StatelessWidget {
       title: Text(log.context, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(log.time),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        GlucoseSparkline(value: log.value, index: index),
-        const SizedBox(width: 10),
         Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${log.value} mg/dL', style: const TextStyle(fontWeight: FontWeight.w800)),
           Text(high ? 'Acima da meta' : 'Na meta', style: TextStyle(fontSize: 11, color: color)),
@@ -128,7 +126,7 @@ class GlucoseHistoryScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             const PageHeading(eyebrow: 'Acompanhamento completo', title: 'Todos os registros', subtitle: 'Consulte seu histórico e a evolução da glicemia.'),
-            const AppCard(
+            AppCard(
               padding: EdgeInsets.all(18),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Eyebrow('Últimos 7 dias'),
@@ -136,7 +134,7 @@ class GlucoseHistoryScreen extends StatelessWidget {
                 Text('Evolução da glicemia', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 Text('Meta: 70–140 mg/dL', style: TextStyle(fontSize: 11, color: AppColors.muted)),
                 SizedBox(height: 14),
-                GlucoseChart(height: 200),
+                GlucoseHistoryChart(logs: logs, height: 220),
               ]),
             ),
             AppCard(

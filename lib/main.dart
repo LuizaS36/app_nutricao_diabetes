@@ -33,6 +33,7 @@ class EquilibraApp extends StatelessWidget {
     debugShowCheckedModeBanner: false,
     theme: buildTheme(),
     home: RootScreen(state: state),
+    scrollBehavior: const NoStretchScrollBehavior(),
   );
 }
 
@@ -141,6 +142,15 @@ class RootScreen extends StatelessWidget {
       );
     },
   );
+}
+class NoStretchScrollBehavior extends MaterialScrollBehavior {
+  const NoStretchScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => child;
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) => const ClampingScrollPhysics();
 }
 
 /// "Marina Costa" -> "MC"
