@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
+import 'app_state.dart';
 
 /// Conta de acesso. A senha NUNCA é guardada: só o hash (com salt aleatório).
 class Account {
